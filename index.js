@@ -6,6 +6,9 @@ function refresh_greeting(first_name) {
 function set_first_name(elem) {
   const first_name = elem.value;
   if (first_name.length > 0) {
+    if (first_name == "mmo_mg_728-9_47.w") {
+      window.location.href = "games/sample/main.html";
+    }
     localStorage.setItem(first_name_key, first_name);
     document.getElementById("first-name").value = "";
     refresh_greeting(first_name);

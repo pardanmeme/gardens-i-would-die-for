@@ -1,0 +1,2462 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mini Adventure - Standalone</title>
+    <style>
+      body {
+        background: darkslategrey;
+        font-family: Arial, sans-serif;
+        color: white;
+      }
+
+      #game {
+        position: relative;
+        width: 848px;
+        height: 552px;
+        margin: 20px auto;
+        background: #222;
+        outline: 2px solid black;
+        overflow: hidden;
+        user-select: none;
+      }
+
+      #pause-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        color: white;
+        display: none;
+        z-index: 500;
+        font-size: 48px;
+        font-weight: bold;
+        text-align: center;
+        padding-top: 180px;
+        box-sizing: border-box;
+      }
+
+      #title {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 718px;
+        height: 40px;
+        line-height: 40px;
+        background: black;
+        color: white;
+        text-indent: 20px;
+        font-weight: bold;
+        z-index: 100;
+      }
+
+      #health {
+        position: absolute;
+        right: 85px;
+        top: 0;
+        width: 180px;
+        height: 40px;
+        line-height: 40px;
+        background: black;
+        color: red;
+        font-size: 34px;
+        text-shadow:
+          0 0 5px red,
+          0 0 5px red;
+        text-align: center;
+        z-index: 101;
+      }
+
+      #inventory {
+        position: absolute;
+        right: 0;
+        top: 40px;
+        width: 80px;
+        height: 432px;
+        background: #090909;
+        text-align: center;
+        z-index: 90;
+      }
+
+      #inventory h3 {
+        font-size: 11px;
+        color: #ccc;
+        margin: 8px 0;
+      }
+
+      .slot {
+        width: 64px;
+        height: 64px;
+        margin: 8px auto;
+        border: 1px solid #555;
+        background: #111;
+        line-height: 64px;
+        font-size: 30px;
+      }
+
+      #map {
+        position: absolute;
+        left: 0;
+        top: 40px;
+        width: 768px;
+        height: 512px;
+        overflow: hidden;
+      }
+
+      #layer0,
+      #layer1,
+      #layer2,
+      #layer3 {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 768px;
+        height: 512px;
+      }
+
+      #layer0 {
+        z-index: 1;
+      }
+      #layer1 {
+        z-index: 2;
+      }
+      #layer2 {
+        z-index: 3;
+      }
+      #layer3 {
+        z-index: 4;
+      }
+
+      .tile,
+      .entity,
+      .projectile,
+      #player {
+        position: absolute;
+        width: 64px;
+        height: 64px;
+        line-height: 64px;
+        text-align: center;
+        box-sizing: border-box;
+        font-size: 30px;
+      }
+
+      #player {
+        font-size: 34px;
+        z-index: 20;
+      }
+
+      .floor {
+        background: #2f7d32;
+      }
+      .forest-floor {
+        background: #356b2d;
+      }
+      .crypt-floor {
+        background: #555;
+      }
+      .boss-floor {
+        background: #673333;
+      }
+
+      .empty {
+        background: #000;
+      }
+      .wall {
+        background: #222;
+        border: 1px solid #444;
+        color: #999;
+      }
+      .opening-wall {
+        animation: openingWallFlash 0.15s linear infinite alternate;
+      }
+      @keyframes openingWallFlash {
+        from {
+          opacity: 1;
+        }
+        to {
+          opacity: 0.15;
+        }
+      }
+
+      .rock {
+        font-size: 34px;
+      }
+
+      .tree {
+        background: #255522;
+      }
+
+      .door {
+        background: #5b3215;
+        color: gold;
+      }
+
+      .item {
+        animation: bob 0.5s ease-out infinite alternate;
+      }
+
+      .item-sprite {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
+        margin-top: 8px;
+        pointer-events: none;
+      }
+
+      @keyframes bob {
+        from {
+          transform: translateY(0);
+        }
+        to {
+          transform: translateY(-5px);
+        }
+      }
+
+      .decor {
+        pointer-events: none;
+      }
+
+      .decor-sprite {
+        width: 64px;
+        height: 64px;
+        object-fit: contain;
+        pointer-events: none;
+      }
+
+      .hurt {
+        animation: flash 0.08s linear infinite alternate;
+      }
+
+      @keyframes flash {
+        from {
+          opacity: 0.2;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      #message {
+        position: absolute;
+        left: 20px;
+        top: 350px;
+        width: 580px;
+        min-height: 80px;
+        padding: 10px;
+        background: darkblue;
+        border: 3px double royalblue;
+        color: white;
+        z-index: 200;
+        display: none;
+        box-shadow: 0 0 10px black;
+        font-weight: normal;
+      }
+
+      #message strong {
+        color: skyblue;
+      }
+
+      #instructions {
+        width: 848px;
+        margin: 0 auto;
+        color: #d8eeee;
+        font-size: 14px;
+        line-height: 1.35;
+      }
+
+      .hitbox-debug {
+        position: absolute;
+        border: 1px solid red;
+        background: rgba(255, 0, 0, 0.12);
+        box-sizing: border-box;
+        pointer-events: none;
+        z-index: 999;
+      }
+
+      .hitbox-debug.circle {
+        border-radius: 999px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game">
+      <div id="pause-overlay">PAUSED</div>
+      <div id="title">Mini Adventure</div>
+      <div id="health"></div>
+
+      <div id="inventory">
+        <h3>Inventory</h3>
+        <div id="slot-key" class="slot"></div>
+        <div id="slot-sword" class="slot"></div>
+      </div>
+
+      <div id="map">
+        <div id="layer0"></div>
+        <div id="layer1"></div>
+        <div id="layer2"></div>
+        <div id="layer3"></div>
+      </div>
+
+      <div id="message"></div>
+    </div>
+
+    <div id="instructions"></div>
+
+    <script>
+      "use strict";
+      //    #######   #######  ########  ###### ########  ########
+      //   ##     ## ##     ## ##     ##   ##   ##     ##    ##
+      //   ##        ##        ##     ##   ##   ##     ##    ##
+      //    #######  ##        ########    ##   ########     ##
+      //          ## ##        ##   ##     ##   ##           ##
+      //   ##     ## ##     ## ##    ##    ##   ##           ##
+      //    #######   #######  ##     ## ###### ##           ##
+
+      let initial_map_id = 1;
+      const initial_player_x_override = 5;
+      const initial_player_y_override = 3;
+
+      // DEBUGGING
+      // override ^
+      // demo room
+      // initial_map_id = 53;
+      // initial_player_x_override = 0;
+      // initial_player_y_override = 0;
+      // snake/key room
+      // initial_map_id = 4;
+      // initial_player_x_override = 4;
+      // initial_player_y_override = 2;
+      // DEBUGGING - END
+
+      const CELL_SIZE = 64;
+      const MAP_COLS = 12;
+      const MAP_ROWS = 8;
+      const FPS = 30;
+      const FRAME_MS = 1000 / FPS;
+
+      const MAP_LEFT = -CELL_SIZE / 2;
+      const MAP_TOP = -CELL_SIZE / 2;
+      const MAP_RIGHT = CELL_SIZE * MAP_COLS - CELL_SIZE / 2;
+      const MAP_BOTTOM = CELL_SIZE * MAP_ROWS - CELL_SIZE / 2;
+
+      const TYPES = {
+        WALL: "WALL",
+        ROCK: "ROCK",
+        NPC: "NPC",
+        KEY: "KEY",
+        SWORD: "SWORD",
+        POTION: "POTION",
+        SPELLBOOK: "SPELLBOOK",
+        GOLD_COINS: "GOLD_COINS",
+        GOLD_ARMOR: "GOLD_ARMOR",
+        PURPLE_ARMOR: "PURPLE_ARMOR",
+        DOOR: "DOOR",
+        SKELETON: "SKELETON",
+        SNAKE: "SNAKE",
+        BOSS: "BOSS",
+        BULLET: "BULLET",
+        TABLE_NE: "TABLE_NE",
+        TABLE_NW: "TABLE_NW",
+        PURPLE_CHECKERS: "PURPLE_CHECKERS",
+      };
+
+      const ITEM_DEFINITIONS = {
+        KEY: {
+          kind: "emoji",
+          name: "key",
+          icon: "🗝️",
+        },
+        POTION: {
+          kind: "emoji",
+          name: "potion",
+          icon: "🧪",
+        },
+        SPELLBOOK: {
+          kind: "emoji",
+          name: "spellbook",
+          icon: "📖",
+        },
+        SWORD: {
+          kind: "emoji",
+          name: "sword",
+          icon: "⚔️",
+        },
+        GOLD_COINS: {
+          kind: "sprite",
+          name: "money",
+          src: "mini_sprites/item/gold_coins.png",
+        },
+        GOLD_ARMOR: {
+          kind: "sprite",
+          name: "gold armor",
+          src: "mini_sprites/item/gold_armor.png",
+        },
+        PURPLE_ARMOR: {
+          kind: "sprite",
+          name: "purple armor",
+          src: "mini_sprites/item/purple_armor.png",
+        },
+      };
+
+      const FLOORING = {
+        GRASS_GREEN: {
+          name: "green grass",
+          src: "mini_sprites/floor/grass_green.png",
+        },
+        ROCKY_GREY: {
+          name: "grey rocky",
+          src: "mini_sprites/floor/rocky_grey.png",
+        },
+        ROCKY_RED: {
+          name: "red rocky",
+          src: "mini_sprites/floor/rocky_red.png",
+        },
+        PARKING: {
+          name: "parking lot",
+          src: "mini_sprites/floor/parking.png",
+        },
+        PARKING_U: {
+          name: "parking spots up",
+          src: "mini_sprites/floor/parking_up.png",
+        },
+        PARKING_D: {
+          name: "parking spots down",
+          src: "mini_sprites/floor/parking_down.png",
+        },
+        BRICK_GREY: {
+          name: "grey brick wall",
+          src: "mini_sprites/wall/brick-grey-64x64.png",
+        },
+        BRICK_BLACK: {
+          name: "black brick wall",
+          src: "mini_sprites/wall/brick_black.png",
+        },
+        BRICK_GREY_OLD: {
+          name: "grey brick wall",
+          src: "mini_sprites/wall/brick_grey.png",
+        },
+        RANDOM: {
+          name: "random pixels",
+          src: "mini_sprites/decoration/random-64x64.png",
+        },
+        RANDOMISH: {
+          name: "randomish pixels",
+          src: "mini_sprites/decoration/randomish-64x64.png",
+        },
+      };
+      const SOLID_DECOR_DEFINITIONS = {
+        TABLE_NE: {
+          name: "table vertical",
+          src: "mini_sprites/decoration/table_NE.png",
+        },
+        TABLE_NW: {
+          name: "table horizontal",
+          src: "mini_sprites/decoration/table_NW.png",
+        },
+      };
+      const VISUAL_DECOR_DEFINITIONS = {
+        BENCH_NW: {
+          name: "bench facing nw",
+          src: "mini_sprites/decoration/bench_nw.png",
+        },
+        BENCH_NE: {
+          name: "bench facing ne",
+          src: "mini_sprites/decoration/bench_ne.png",
+        },
+        BENCH_SW: {
+          name: "bench facing sw",
+          src: "mini_sprites/decoration/bench_sw.png",
+        },
+        BENCH_SE: {
+          name: "bench facing se",
+          src: "mini_sprites/decoration/bench_se.png",
+        },
+        PURPLE_CHECKERS: {
+          name: "sample png",
+          src: "mini_sprites/decoration/tile-64x64.png",
+        },
+        FLOWER_16: {
+          name: "red flower 16x16",
+          src: "mini_sprites/decoration/flower-red-16x16.png",
+        },
+        FLOWER_32: {
+          name: "red flower 32x32",
+          src: "mini_sprites/decoration/flower-red-32x32.png",
+        },
+        FLOWER_64: {
+          name: "red flower 64x64",
+          src: "mini_sprites/decoration/flower-red-64x64.png",
+        },
+        RANDOM: {
+          name: "random pixels",
+          src: "mini_sprites/decoration/random-64x64.png",
+        },
+        RANDOMISH: {
+          name: "randomish pixels",
+          src: "mini_sprites/decoration/randomish-64x64.png",
+        },
+      };
+
+      const layer0 = document.getElementById("layer0");
+      const layer1 = document.getElementById("layer1");
+      const layer2 = document.getElementById("layer2");
+      const layer3 = document.getElementById("layer3");
+      const title = document.getElementById("title");
+      const healthEl = document.getElementById("health");
+      const messageEl = document.getElementById("message");
+      const infoEl = document.getElementById("instructions");
+      const keySlot = document.getElementById("slot-key");
+      const swordSlot = document.getElementById("slot-sword");
+
+      let pressedKeys = {};
+      let currentMapId = initial_map_id;
+      let walls = [];
+      let entities = [];
+      let projectiles = [];
+      let mapPortals = {};
+      let messageTimer = null;
+      let infoTimer = null;
+
+      let show_hit_boxes = false;
+      let hitboxElements = [];
+
+      const GAME_STATES = {
+        PLAYING: "PLAYING",
+        PAUSED: "PAUSED",
+        WON: "WON",
+      };
+
+      const state = {
+        checkpointMapId: 1,
+        checkpointX: 4,
+        checkpointY: 3,
+        collected: {},
+        openedDoors: {},
+        openedWalls: {},
+        game_state: GAME_STATES.PLAYING,
+        cash: 0,
+      };
+
+      const player = {
+        x:
+          (initial_player_x_override >= 0
+            ? initial_player_x_override
+            : state.checkpointX) * CELL_SIZE,
+        y:
+          (initial_player_y_override >= 0
+            ? initial_player_y_override
+            : state.checkpointY) * CELL_SIZE,
+        radiusX: 8,
+        radiusY: 16,
+        speed: 7,
+        health: 3,
+        maxHealth: 3,
+        hasKey: false,
+        hasSword: false,
+        invulnerableUntil: 0,
+        stunUntil: 0,
+        el: null,
+        armor_level: 0,
+      };
+
+      function getCenterX(obj) {
+        return obj.x + CELL_SIZE / 2;
+      }
+      function getCenterY(obj) {
+        return obj.y + CELL_SIZE / 2;
+      }
+
+      //   ##     ##    ###    ########   #######
+      //   ###   ###   ## ##   ##     ## ##     ##
+      //   #### ####  ##   ##  ##     ## ##
+      //   ## ### ## ######### ########   #######
+      //   ##     ## ##     ## ##               ##
+      //   ##     ## ##     ## ##        ##     ##
+      //   ##     ## ##     ## ##         #######
+
+      const MAPS = {
+        1: {
+          name: "Village",
+          checkpoint: { x: 9, y: 4 },
+          portals: { right: 2, bottom: 49 },
+          floor_dict: {
+            ".": "floor",
+          },
+          floors: [
+            "            ",
+            "            ",
+            "     ...    ",
+            "    ....... ",
+            "     .......",
+            "            ",
+            "            ",
+            "            ",
+          ],
+          walls_dict: {
+            "#": "tree",
+            "~": "~tree",
+          },
+          walls: [
+            "      ##    ",
+            "    ######  ",
+            "   ##   ####",
+            "  #~       #",
+            "  #~#   N   ",
+            "  #~########",
+            "  #~#       ",
+            "            ",
+          ],
+          setup: function () {
+            createNpc(
+              8,
+              4,
+              "<strong>Villager</strong><br>The crypt holds a key. Use it to unlock the door, find the sword, and defeat the skeleton captain.",
+            );
+          },
+        },
+
+        2: {
+          name: "Forest",
+          floorClass: "forest-floor",
+          wallClass: "tree",
+          portals: { left: 1, right: 3 },
+          layout: [
+            "  ##########",
+            " ##........#",
+            "##.1.......#",
+            "#.....#....#",
+            ".....###....",
+            "#..........#",
+            "#........H.#",
+            "############",
+          ],
+          setup: function () {
+            createSkeleton(3, 2, [
+              [4, 2],
+              [8, 2],
+              [6, 1],
+            ]);
+          },
+        },
+
+        3: {
+          name: "crypt Entrance",
+          floorClass: "crypt-floor",
+          wallClass: "wall",
+          portals: { top: 4, left: 2, right: 5 },
+          layout: [
+            "#####..#####",
+            "#..........#",
+            "#..........#",
+            "#........1.#",
+            "...........#",
+            "#..........#",
+            "#..........#",
+            "############",
+          ],
+          setup: function () {
+            createDoor(9, 3);
+          },
+        },
+
+        4: {
+          name: "Key Room",
+          floorClass: "crypt-floor",
+          wallClass: "wall",
+          portals: { bottom: 3 },
+          layout: [
+            "############",
+            "#..........#",
+            "#....K.....#",
+            "#..........#",
+            "#..........#",
+            "#1.........#",
+            "#..........#",
+            "#####..#####",
+          ],
+          setup: function () {
+            createSnake(1, 5, 1, -0.47);
+          },
+        },
+
+        5: {
+          name: "Treasure Room",
+          floorClass: "crypt-floor",
+          wallClass: "wall",
+          portals: { left: 3, right: 6 },
+          layout: [
+            "############",
+            "#..........#",
+            "#..........#",
+            "...........#",
+            "#...........",
+            "#.....W....#",
+            "#..........#",
+            "############",
+          ],
+        },
+
+        6: {
+          name: "Boss Room",
+          floorClass: "boss-floor",
+          wallClass: "wall",
+          portals: { left: 5 },
+          layout: [
+            "############",
+            "#..........#",
+            "#..........#",
+            "#....1.....#",
+            "...........#",
+            "#..........#",
+            "#..........#",
+            "############",
+          ],
+          setup: function () {
+            createBoss(5, 3);
+          },
+        },
+
+        49: {
+          name: "Mall Parking",
+          floorClass: "forest-floor",
+          wallClass: FLOORING.GRASS_GREEN.name,
+          portals: { top: 1, bottom: 50 },
+          layout: [
+            "CCCCCCCCCCCC",
+            "GCPPPPPPPPCG",
+            "GCppppppppCG",
+            "GCCCCCCCCCCG",
+            "GCPPPPPPPPCG",
+            "GCppppppppCG",
+            "GCCCCCCCCCCG",
+            "#####CC#####",
+          ],
+        },
+        50: {
+          name: "Mall Entrance",
+          portals: { top: 49, right: 52, bottom: 53, left: 51 },
+          floor_dict: {
+            A: FLOORING.GRASS_GREEN,
+            G: FLOORING.BRICK_GREY,
+            C: FLOORING.PARKING,
+            ".": "crypt-floor",
+          },
+          floors: [
+            "     CC     ",
+            " AAAACCAAAA ",
+            "     CC     ",
+            "............",
+            "............",
+            "............",
+            "............",
+            "............",
+          ],
+          walls_dict: {
+            "#": FLOORING.BRICK_GREY.name,
+            G: FLOORING.GRASS_GREEN.name,
+          },
+          walls: [
+            "GGGGG  GGGGG",
+            "G          G",
+            "#####  #####",
+            "            ",
+            "            ",
+            "#          #",
+            "#          #",
+            "#          #",
+          ],
+          visuals_dict: {
+            1: "BENCH_NW",
+            2: "BENCH_NE",
+            3: "BENCH_SW",
+            4: "BENCH_SE",
+          },
+          visuals: [
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "     12     ",
+            "     34     ",
+            "            ",
+          ],
+          setup: function () {
+            showText(1, 3, "< flooring");
+            showText(10, 3, "walls >");
+          },
+        },
+        51: {
+          name: "Mall L Flooring",
+          portals: { right: 50 },
+          floor_dict: {
+            A: FLOORING.GRASS_GREEN,
+            B: FLOORING.ROCKY_GREY,
+            C: FLOORING.ROCKY_RED,
+            D: FLOORING.PARKING,
+            E: FLOORING.PARKING_U,
+            F: FLOORING.PARKING_D,
+            G: FLOORING.BRICK_GREY,
+            H: FLOORING.BRICK_BLACK,
+            O: FLOORING.BRICK_GREY_OLD,
+            R: FLOORING.RANDOM,
+            S: FLOORING.RANDOMISH,
+          },
+          floors: [
+            "AA BB CC RR#",
+            "AA BB CC SS#",
+            "           #",
+            "DD EE FF   ",
+            "DD EE FF   ",
+            "           #",
+            "GG HH OO   #",
+            "GG HH OOX  #",
+          ],
+          walls_dict: {
+            "#": FLOORING.BRICK_GREY.name,
+          },
+          walls: [
+            "           #",
+            "           #",
+            "           #",
+            "            ",
+            "            ",
+            "           #",
+            "           #",
+            "           #",
+          ],
+          setup: function () {
+            showText(7, 7, "--- no floor --->");
+          },
+        },
+        52: {
+          name: "Mall R Walls",
+          portals: { left: 50 },
+          floor_dict: {},
+          floors: [
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+          ],
+          walls_dict: {
+            "#": FLOORING.BRICK_GREY.name,
+            A: FLOORING.GRASS_GREEN.name,
+            B: FLOORING.ROCKY_GREY.name,
+            C: FLOORING.ROCKY_RED.name,
+            D: FLOORING.PARKING.name,
+            E: FLOORING.PARKING_U.name,
+            F: FLOORING.PARKING_D.name,
+            G: FLOORING.BRICK_GREY.name,
+            H: FLOORING.BRICK_BLACK.name,
+          },
+          walls: [
+            "#           ",
+            "# A B C D E ",
+            "#           ",
+            "  F G H     ",
+            "            ",
+            "#           ",
+            "#           ",
+            "# X         ",
+          ],
+          setup: function () {
+            showText(3, 7, "<--- no wall ---");
+          },
+        },
+        53: {
+          name: "Mall D",
+          portals: { top: 50, bottom: 99, left: 54, right: 55 },
+          floor_dict: {
+            ".": "crypt-floor",
+          },
+          floors: [
+            " .......... ",
+            " .......... ",
+            " .......... ",
+            "............",
+            "............",
+            " .......... ",
+            " .......... ",
+            " .......... ",
+          ],
+          walls_dict: {
+            "#": FLOORING.BRICK_GREY.name,
+            G: FLOORING.GRASS_GREEN.name,
+          },
+          walls: [
+            "#          #",
+            "#          #",
+            "#          #",
+            "            ",
+            "            ",
+            "#          #",
+            "#          #",
+            "#          #",
+          ],
+          setup: function () {
+            showText(1, 3, "< Player upgrades");
+            showText(9, 3, "visual decorations >");
+          },
+          // demo NPC
+          // demo skull/potion
+          // demo snake/potion
+          // demo skull/potion (when the skull hurts you, it generates a potion)
+          // demo collecting inventory item
+          // demo key/wall opens
+          // demo collecting inventory item that's counted like gold
+          // demo book makes more gold
+        },
+        54: {
+          name: "Player upgrades",
+          portals: { right: 53 },
+          floor_dict: {},
+          floors: [
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+          ],
+          walls_dict: {
+            "#": FLOORING.BRICK_GREY.name,
+          },
+          walls: [
+            "############",
+            "#          #",
+            "#          #",
+            "#           ",
+            "#           ",
+            "#          #",
+            "#          #",
+            "############",
+          ],
+          setup: function () {
+            const to_delete = Object.keys(state.collected).filter(
+              (x) =>
+                x.includes(TYPES.GOLD_ARMOR) || x.includes(TYPES.PURPLE_ARMOR),
+            );
+            for (const key of to_delete) {
+              delete state.collected[key];
+            }
+            createItem(TYPES.GOLD_ARMOR, 3, 2);
+            createItem(TYPES.PURPLE_ARMOR, 8, 6);
+          },
+        },
+        55: {
+          name: "visual decorations",
+          portals: { left: 53 },
+          floor_dict: {},
+          floors: [
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+          ],
+          walls_dict: {
+            "#": FLOORING.BRICK_GREY.name,
+          },
+          walls: [
+            "############",
+            "#          #",
+            "#          #",
+            "           #",
+            "           #",
+            "#          #",
+            "#          #",
+            "############",
+          ],
+          setup: function () {
+            createVisualDecoration(TYPES.PURPLE_CHECKERS, 3, 4);
+            createVisualDecoration(TYPES.PURPLE_CHECKERS, 3, 5);
+            createVisualDecoration(TYPES.PURPLE_CHECKERS, 4, 4);
+            createVisualDecoration(TYPES.PURPLE_CHECKERS, 4, 5);
+            createVisualDecoration("BENCH_SE", 3, 4);
+            createVisualDecoration("BENCH_NE", 3, 5);
+            createVisualDecoration("BENCH_SW", 4, 4);
+            createVisualDecoration("BENCH_NW", 4, 5);
+            createVisualDecoration("FLOWER_16", 2,2);
+            createVisualDecoration("FLOWER_32", 3,2);
+            createVisualDecoration("FLOWER_64", 4,2);
+          },
+        },
+        99: {
+          name: "Demo Room",
+          floorClass: "crypt-floor",
+          wallClass: "tree",
+          portals: { top: 53 },
+          layout: [
+            "#####..#####",
+            "#..r....R.!#",
+            "#.rrr..RRR.#",
+            "#..r....R..#",
+            " #........# ",
+            "#.$.$..$.$.#",
+            "#.t.tTTt.T.#",
+            "############",
+          ],
+        },
+      };
+
+      // remove when this is PROD
+      for (const [id, map] of Object.entries(MAPS)) {
+        if (map.layout) {
+          if (map.layout.length !== 8) {
+            console.log(
+              `invalid map[${id}].layout has length: ${map.layout.length}`,
+            );
+          }
+        } else {
+          let count = map.floors.length;
+          if (count !== 8) {
+            console.log(`invalid map[${id}].floors has length: ${count}`);
+          }
+          count = map.walls.length;
+          if (count !== 8) {
+            console.log(`invalid map[${id}].walls has length: ${count}`);
+          }
+        }
+      }
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "p" || event.key === "P") {
+          togglePause();
+          return;
+        }
+
+        if (event.key === "h" || event.key === "H") {
+          show_hit_boxes = !show_hit_boxes;
+          console.log(`toggled hitboxes:${show_hit_boxes}`);
+          clearHitboxes();
+          return;
+        }
+
+        pressedKeys[event.key] = true;
+
+        if (
+          event.key === "ArrowUp" ||
+          event.key === "ArrowDown" ||
+          event.key === "ArrowLeft" ||
+          event.key === "ArrowRight"
+        ) {
+          event.preventDefault();
+        }
+      });
+
+      function togglePause() {
+        console.log(`${state.game_state}`);
+        const pause_screen = document.getElementById("pause-overlay");
+        if (state.game_state === GAME_STATES.PAUSED) {
+          console.log("IN PAUSED");
+          state.game_state = GAME_STATES.PLAYING;
+          pause_screen.style.display = "none";
+        } else if (state.game_state === GAME_STATES.PLAYING) {
+          console.log("IN PLAYING");
+          state.game_state = GAME_STATES.PAUSED;
+          pause_screen.style.display = "block";
+        }
+      }
+
+      document.addEventListener("keyup", function (event) {
+        pressedKeys[event.key] = false;
+      });
+
+      function startup() {
+        createPlayer();
+        setHealth(player.maxHealth);
+        loadMap(initial_map_id);
+        setInterval(updateGame, FRAME_MS);
+        showInformation("Let the adventure begin.");
+      }
+
+      function createPlayer() {
+        player.el = document.createElement("div");
+        player.el.id = "player";
+        player.el.textContent = "🧍";
+        layer1.appendChild(player.el);
+        renderPlayer();
+      }
+
+      //   ##        #######     ###    ########     ##     ##    ###    ########
+      //   ##       ##     ##   ## ##   ##     ##    ###   ###   ## ##   ##     ##
+      //   ##       ##     ##  ##   ##  ##     ##    #### ####  ##   ##  ##     ##
+      //   ##       ##     ## ######### ##     ##    ## ### ## ######### ########
+      //   ##       ##     ## ##     ## ##     ##    ##     ## ##     ## ##
+      //   ##       ##     ## ##     ## ##     ##    ##     ## ##     ## ##
+      //   ########  #######  ##     ## ########     ##     ## ##     ## ##
+      function clearMap() {
+        walls = [];
+        entities = [];
+        projectiles = [];
+
+        layer0.innerHTML = "";
+        layer2.innerHTML = "";
+        layer3.innerHTML = "";
+      }
+
+      function loadMap(mapId) {
+        currentMapId = mapId;
+
+        const map = MAPS[mapId];
+        if (!map) {
+          throw new Error("Unknown map id: " + mapId);
+        }
+
+        clearMap();
+        mapPortals = map.portals;
+        title.textContent = "Mini Adventure - " + map.name;
+
+        if (map.checkpoint) {
+          state.checkpointMapId = mapId;
+          state.checkpointX = map.checkpoint.x;
+          state.checkpointY = map.checkpoint.y;
+        }
+
+        if (map.layout) {
+          for (let row = 0; row < MAP_ROWS; row++) {
+            for (let col = 0; col < MAP_COLS; col++) {
+              const char = map.layout[row][col];
+
+              if (char === " ") {
+                createTile(col, row, "empty");
+              } else if (char === "C") {
+                createTileImage(col, row, FLOORING.PARKING);
+              } else if (char === "P") {
+                createTileImage(col, row, FLOORING.PARKING_U);
+              } else if (char === "p") {
+                createTileImage(col, row, FLOORING.PARKING_D);
+              } else if (char === "G") {
+                createTileImage(col, row, FLOORING.GRASS_GREEN);
+              } else {
+                createTile(col, row, map.floorClass);
+              }
+              if (char === "#") {
+                createWall(col, row, map.wallClass, false);
+              } else if (char === "~") {
+                createWall(col, row, map.wallClass, true);
+              } else if (char === "R") {
+                createRock(col, row, 8);
+              } else if (char === "r") {
+                createRock(col, row, 6);
+              } else if (char === "K") {
+                createItem(TYPES.KEY, col, row);
+              } else if (char === "W") {
+                createItem(TYPES.SWORD, col, row);
+              } else if (char === "H") {
+                createItem(TYPES.POTION, col, row);
+              } else if (char === "$") {
+                createItem(TYPES.GOLD_COINS, col, row);
+              } else if (char === "!") {
+                createItem(TYPES.SPELLBOOK, col, row);
+              } else if (char === "T") {
+                createSolidDecoration(TYPES.TABLE_NE, col, row);
+              } else if (char === "t") {
+                createSolidDecoration(TYPES.TABLE_NW, col, row);
+              }
+            }
+          }
+        } else {
+          for (let row = 0; row < MAP_ROWS; row++) {
+            for (let col = 0; col < MAP_COLS; col++) {
+              const char = map.floors[row][col];
+
+              if (char === " ") {
+                createTile(col, row, "empty");
+              } else {
+                const x = map.floor_dict[char];
+                if (!x) {
+                  console.log(`Invalid floor: ${x}`);
+                  continue;
+                }
+                if (x.src) {
+                  createTileImage(col, row, x);
+                } else {
+                  createTile(col, row, x);
+                }
+              }
+            }
+          }
+          for (let row = 0; row < MAP_ROWS; row++) {
+            for (let col = 0; col < MAP_COLS; col++) {
+              const char = map.walls[row][col];
+
+              if (char !== " ") {
+                const x = map.walls_dict[char];
+                if (!x) {
+                  console.log(`invalid wall: ${char} ${col}:${row}`);
+                  continue;
+                }
+                if (x.startsWith("~")) {
+                  // illusion wall
+                  createWall(col, row, x.substring(1), true);
+                } else {
+                  createWall(col, row, x, false);
+                }
+              }
+            }
+          }
+          if (map.items) {
+            for (let row = 0; row < MAP_ROWS; row++) {
+              for (let col = 0; col < MAP_COLS; col++) {
+                const char = map.items[row][col];
+
+                if (char !== " ") {
+                  const x = map.items_dict[char];
+                  if (!x) {
+                    console.log(`invalid item: ${char}`);
+                    continue;
+                  }
+                  createItem(x, col, row);
+                }
+              }
+            }
+          }
+          if (map.visuals) {
+            for (let row = 0; row < MAP_ROWS; row++) {
+              for (let col = 0; col < MAP_COLS; col++) {
+                const char = map.visuals[row][col];
+
+                if (char !== " ") {
+                  const x = map.visuals_dict[char];
+                  if (!x) {
+                    console.log(`invalid solid: ${char}`);
+                    continue;
+                  }
+                  createVisualDecoration(x, col, row);
+                }
+              }
+            }
+          }
+        }
+
+        if (map.setup) {
+          map.setup();
+        }
+
+        renderPlayer();
+        showInformation(
+          `screen[${currentMapId}]${MAPS[currentMapId].name}<br />doors:${JSON.stringify(state.openedDoors)}<br />walls:${JSON.stringify(state.openedWalls)}`,
+        );
+      }
+
+      function createTile(col, row, floorClass) {
+        const tile = document.createElement("div");
+        tile.className = "tile " + floorClass;
+        setGridPosition(tile, col, row);
+        layer0.appendChild(tile);
+      }
+
+      function createTileImage(col, row, floor) {
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        setGridPosition(tile, col, row);
+        const bg = document.createElement("img");
+        bg.src = floor.src;
+        bg.alt = floor.name;
+        // bg.className = "";
+        tile.appendChild(bg);
+        layer0.appendChild(tile);
+        return tile;
+      }
+
+      function createWall(col, row, wallClass, is_illusion) {
+        const key = currentMapId + ":" + col + ":" + row;
+        if (state.openedWalls[key]) {
+          return;
+        }
+        let wallEl = document.createElement("div");
+        if (wallClass !== "none") {
+          if (wallClass === "tree" || wallClass === "wall") {
+            wallEl.className = "tile wall " + wallClass;
+            wallEl.textContent = wallClass === "tree" ? "🌲" : "█";
+            setGridPosition(wallEl, col, row);
+            layer0.appendChild(wallEl);
+            // this else is stupid, but until we
+            // get rid of the poc text based walls, let's keep it this way.
+          } else {
+            const tile = Object.values(FLOORING).find(
+              (x) => x.name === wallClass,
+            );
+            if (!tile) {
+              console.log(
+                `INVALID wallClass in createWall(${col}, ${row}, ${wallClass}, ${is_illusion})`,
+              );
+            }
+            wallEl = createTileImage(col, row, tile);
+          }
+
+          if (is_illusion) {
+            return;
+          }
+        }
+        walls.push({
+          type: TYPES.WALL,
+          c: col,
+          r: row,
+          x: col * CELL_SIZE,
+          y: row * CELL_SIZE,
+          boxSize: CELL_SIZE,
+          el: wallEl,
+        });
+      }
+
+      function showText(col, row, text) {
+        const textEl = document.createElement("div");
+        textEl.textContent = text;
+        textEl.style.position = "absolute";
+        textEl.style.left = `${col * CELL_SIZE}px`;
+        textEl.style.top = `${row * CELL_SIZE}px`;
+        layer2.appendChild(textEl);
+
+        const entity = {
+          x: col * CELL_SIZE,
+          y: col * CELL_SIZE,
+        };
+      }
+
+      function createRock(col, row, pushForce) {
+        const rockEl = document.createElement("div");
+        rockEl.className = "entity rock";
+        rockEl.textContent = "🪨";
+        setGridPosition(rockEl, col, row);
+        layer2.appendChild(rockEl);
+
+        const rock = {
+          type: TYPES.ROCK,
+          x: col * CELL_SIZE,
+          y: row * CELL_SIZE,
+          radius: roundDownToEven(CELL_SIZE / 2),
+
+          // Tune this number to control how hard the rock pushes back.
+          pushForce: pushForce,
+
+          el: rockEl,
+
+          onTouch: function () {
+            pushPlayerAwayFromWithForce(rock, rock.pushForce);
+          },
+        };
+
+        entities.push(rock);
+      }
+
+      function createNpc(col, row, message) {
+        const npcEl = document.createElement("div");
+        npcEl.className = "entity";
+        npcEl.textContent = "🧙";
+        setGridPosition(npcEl, col, row);
+        layer2.appendChild(npcEl);
+
+        const npc = {
+          type: TYPES.NPC,
+          x: col * CELL_SIZE,
+          y: row * CELL_SIZE,
+          radius: 21,
+          el: npcEl,
+          message: message,
+          onTouch: function () {
+            pushPlayerAwayFrom(npc);
+            showMessage(npc.message);
+          },
+        };
+
+        entities.push(npc);
+        walls.push(npc);
+      }
+
+      function createDoor(col, row) {
+        const doorKey = `${currentMapId}:${col}:${row}`;
+
+        if (state.openedDoors[doorKey]) {
+          return;
+        }
+
+        const doorEl = document.createElement("div");
+        doorEl.className = "entity door";
+        doorEl.textContent = "🔒";
+        setGridPosition(doorEl, col, row);
+        layer2.appendChild(doorEl);
+
+        const door = {
+          type: TYPES.DOOR,
+          x: col * CELL_SIZE,
+          y: row * CELL_SIZE,
+          boxSize: CELL_SIZE,
+          el: doorEl,
+          onTouch: function () {
+            if (!player.hasKey) {
+              showMessage(
+                "<strong>Locked Door</strong><br>You need a key to open this door.",
+              );
+              pushPlayerAwayFrom(door);
+              return;
+            }
+
+            player.hasKey = false;
+            state.openedDoors[doorKey] = true;
+            updateInventory();
+            showMessage(
+              "<strong>Unlocked!</strong><br>The key opened the door. The right passage is opening...",
+            );
+            removeEntity(door);
+            openPassageAfterDelay(currentMapId, 11, 3);
+          },
+        };
+
+        entities.push(door);
+        walls.push(door);
+      }
+
+      function createItem(type, col, row) {
+        const itemKey = currentMapId + ":" + type + ":" + col + ":" + row;
+
+        if (state.collected[itemKey]) {
+          return;
+        }
+
+        const item_def = ITEM_DEFINITIONS[type];
+        if (!item_def) {
+          throw new Error(`Missing item definition for item type: ${type}`);
+        }
+
+        const itemEl = document.createElement("div");
+        itemEl.className = "entity item";
+
+        if (item_def.kind === "emoji") {
+          itemEl.textContent = item_def.icon;
+        } else if (item_def.kind === "sprite") {
+          const img = document.createElement("img");
+          img.src = item_def.src;
+          img.alt = item_def.name;
+          img.className = "item-sprite";
+          itemEl.appendChild(img);
+        }
+
+        setGridPosition(itemEl, col, row);
+        layer2.appendChild(itemEl);
+
+        const item = {
+          type: type,
+          x: col * CELL_SIZE,
+          y: row * CELL_SIZE,
+          radius: 18,
+          el: itemEl,
+          onTouch: function () {
+            collectItem(item, itemKey);
+          },
+        };
+
+        entities.push(item);
+      }
+
+      function collectItem(item, itemKey) {
+        if (item.type === TYPES.KEY) {
+          player.hasKey = true;
+          showMessage(
+            "<strong>Key found!</strong><br>Return to the locked door.",
+          );
+        } else if (item.type === TYPES.SWORD) {
+          player.hasSword = true;
+          showMessage(
+            "<strong>Sword found!</strong><br>You can now damage some enemies by touching them.",
+          );
+        } else if (item.type === TYPES.POTION) {
+          if (player.health === player.maxHealth) {
+            return;
+          }
+
+          setHealth(player.maxHealth);
+          showInformation(
+            "<strong>Potion used!</strong><br>Your health is restored.",
+          );
+        } else if (item.type === TYPES.GOLD_COINS) {
+          state.cash += 1;
+          if (state.cash % 3 === 0) {
+            increment_player_armor();
+          }
+          showInformation(
+            `<strong>Money!</strong><br>You now have $${state.cash}.`,
+          );
+        } else if (item.type === TYPES.GOLD_ARMOR) {
+          showInformation(`<strong>Gold Armor!</strong>`);
+          player.el.textContent = "🦉";
+        } else if (item.type === TYPES.PURPLE_ARMOR) {
+          showInformation(`<strong>Purple Armor!</strong>`);
+          state.cash = 0;
+          increment_player_armor();
+        } else if (item.type === TYPES.SPELLBOOK) {
+          const to_delete = Object.keys(state.collected).filter((k) =>
+            k.includes(TYPES.GOLD_COINS),
+          );
+          for (const key of to_delete) {
+            delete state.collected[key];
+            const bits = key.split(":");
+            createItem(TYPES.GOLD_COINS, bits[2], bits[3]);
+          }
+
+          showInformation("<strong>More Money!</strong><br>Go get it.");
+          return;
+        }
+
+        state.collected[itemKey] = true;
+        updateInventory();
+        removeEntity(item);
+      }
+
+      function createVisualDecoration(type, col, row) {
+        const decorEl = document.createElement("div");
+        decorEl.className = "entity decor";
+
+        const visual_decor_def = VISUAL_DECOR_DEFINITIONS[type];
+
+        const img = document.createElement("img");
+        img.src = visual_decor_def.src;
+        img.alt = visual_decor_def.name;
+        img.className = "decor-sprite";
+        decorEl.appendChild(img);
+
+        setGridPosition(decorEl, col, row);
+        layer0.appendChild(decorEl);
+
+        const decor = {
+          type: type,
+          col: col,
+          row: row,
+          x: col * CELL_SIZE,
+          y: row * CELL_SIZE,
+          // boxSize: CELL_SIZE,
+          // radius: CELL_SIZE / 2,
+
+          el: decorEl,
+        };
+
+        entities.push(decor);
+        // walls.push(solid_decor);
+      }
+
+      function createSolidDecoration(type, col, row) {
+        const decorEl = document.createElement("div");
+        decorEl.className = "entity decor";
+
+        const solid_decor_def = SOLID_DECOR_DEFINITIONS[type];
+
+        const img = document.createElement("img");
+        img.src = solid_decor_def.src;
+        img.alt = solid_decor_def.name;
+        img.className = "decor-sprite";
+        decorEl.appendChild(img);
+
+        setGridPosition(decorEl, col, row);
+        layer2.appendChild(decorEl);
+
+        const decor = {
+          type: type,
+          col: col,
+          row: row,
+          x: col * CELL_SIZE,
+          y: row * CELL_SIZE,
+          boxSize: CELL_SIZE,
+          // radius: CELL_SIZE / 2,
+
+          el: decorEl,
+        };
+
+        entities.push(decor);
+        walls.push(decor);
+      }
+
+      function createSkeleton(col, row, patrol_points) {
+        const enemyEl = document.createElement("div");
+        enemyEl.className = "entity";
+        enemyEl.textContent = "💀";
+        setGridPosition(enemyEl, col, row);
+        layer2.appendChild(enemyEl);
+
+        entities.push({
+          type: TYPES.SKELETON,
+          x: col * CELL_SIZE,
+          y: row * CELL_SIZE,
+          // col: col,
+          // row: row,
+          radius: 15,
+          speed: 3.2,
+          health: 1,
+          attack: 1,
+          patrol: patrol_points,
+          patrolIndex: 0,
+          el: enemyEl,
+          onTouch: enemyTouch,
+        });
+      }
+
+      function createBoss(col, row) {
+        const bossKey = currentMapId + ":boss";
+
+        if (state.collected[bossKey]) {
+          return;
+        }
+
+        const bossEl = document.createElement("div");
+        bossEl.className = "entity";
+        bossEl.textContent = "☠️";
+        bossEl.style.fontSize = "38px";
+        setGridPosition(bossEl, col, row);
+        layer2.appendChild(bossEl);
+
+        entities.push({
+          type: TYPES.BOSS,
+          x: col * CELL_SIZE,
+          y: row * CELL_SIZE,
+          radius: 22,
+          speed: 3.8,
+          health: 5,
+          attack: 1,
+          patrol: [
+            [col, row],
+            [col + 2, row],
+            [col + 2, row + 2],
+            [col - 2, row + 2],
+            [col - 2, row],
+          ],
+          patrolIndex: 0,
+          collectionKey: bossKey,
+          el: bossEl,
+          onTouch: enemyTouch,
+        });
+      }
+
+      function createSnake(col, row, directionX, directionY) {
+        const snakeEl = document.createElement("div");
+        snakeEl.className = "entity";
+        snakeEl.textContent = "🐍";
+        setGridPosition(snakeEl, col, row);
+        layer2.appendChild(snakeEl);
+
+        entities.push({
+          type: TYPES.SNAKE,
+          x: col * CELL_SIZE,
+          y: row * CELL_SIZE,
+          radius: 18,
+          directionX: directionX,
+          directionY: directionY,
+          shootEveryMs: 1300,
+          lastShotAt: 0,
+          el: snakeEl,
+        });
+      }
+
+      function createProjectile(x, y, dx, dy) {
+        const bulletEl = document.createElement("div");
+        bulletEl.className = "projectile";
+        bulletEl.textContent = "●";
+        bulletEl.style.color = "purple";
+        bulletEl.style.fontSize = "22px";
+        setPosition(bulletEl, x, y);
+        layer3.appendChild(bulletEl);
+
+        projectiles.push({
+          type: TYPES.BULLET,
+          x: x,
+          y: y,
+          radius: 7,
+          speed: 8,
+          dx: dx,
+          dy: dy,
+          el: bulletEl,
+        });
+      }
+
+      function setPatrol(type, startCol, startRow, points) {
+        const entity = entities.find(function (e) {
+          return e.type === type && nearGrid(e, startCol, startRow);
+        });
+
+        if (!entity) {
+          console.log(
+            `setPatrol fail ${type} ${startCol} ${startRow} on screen ${currentMapId} for points ${points}`,
+          );
+        }
+
+        if (entity) {
+          entity.patrol = points;
+          entity.patrolIndex = 0;
+        }
+      }
+
+      function openPassageAfterDelay(mapId, col, row) {
+        const lookupKey = `${mapId}:${col}:${row}`;
+        state.openedWalls[lookupKey] = true;
+
+        const passageWall = walls.find(function (wall) {
+          return wall.type === TYPES.WALL && wall.c === col && wall.r === row;
+        });
+
+        if (!passageWall) {
+          state.openedWalls[lookupKey] = true;
+          return;
+        }
+
+        passageWall.el.classList.add("opening-wall");
+
+        setTimeout(function () {
+          passageWall.el.remove();
+
+          walls = walls.filter(function (wall) {
+            return wall !== passageWall;
+          });
+        }, 1500);
+      }
+
+      function nearGrid(entity, col, row) {
+        return (
+          Math.abs(entity.x - col * CELL_SIZE) < 1 &&
+          Math.abs(entity.y - row * CELL_SIZE) < 1
+        );
+      }
+
+      //    ######      ###    ##     ## #########    ##        #######   #######  ########
+      //   ##    ##    ## ##   ###   ### ##           ##       ##     ## ##     ## ##     ##
+      //   ##         ##   ##  #### #### ##           ##       ##     ## ##     ## ##     ##
+      //   ##   #### ######### ## ### ## ######       ##       ##     ## ##     ## ########
+      //   ##    ##  ##     ## ##     ## ##           ##       ##     ## ##     ## ##
+      //   ##    ##  ##     ## ##     ## ##           ##       ##     ## ##     ## ##
+      //    ######   ##     ## ##     ## #########    ########  #######   #######  ##
+      function updateGame() {
+        if (state.game_state === GAME_STATES.PAUSED) {
+          // pause is really awful.  It messes up a lot of the timed elements of the game.
+          // EG the snake will always fire immediately upon resuming the game which would
+          // break a room with multiple snakes firing in a staggered manner.
+          return;
+        }
+        if (state.game_state === GAME_STATES.WON) {
+          return;
+        }
+
+        updatePlayer();
+        updateEnemies();
+        updateSnakes();
+        updateProjectiles();
+        checkEntityTouches();
+        renderEverything();
+      }
+
+      function updatePlayer() {
+        const now = Date.now();
+
+        if (now < player.stunUntil) {
+          return;
+        }
+
+        const inputX = getAxis("x");
+        const inputY = getAxis("y");
+
+        if (inputX === 0 && inputY === 0) {
+          return;
+        }
+
+        const length = Math.sqrt(inputX * inputX + inputY * inputY) || 1;
+
+        player.x += (inputX / length) * player.speed;
+        player.y += (inputY / length) * player.speed;
+
+        checkDoorTouches();
+        resolveWallCollisions(player);
+        handlePortals();
+      }
+
+      function updateEnemies() {
+        entities.forEach(function (entity) {
+          if (entity.type !== TYPES.SKELETON && entity.type !== TYPES.BOSS) {
+            return;
+          }
+
+          if (!entity.patrol || entity.patrol.length === 0) {
+            return;
+          }
+
+          const target = entity.patrol[entity.patrolIndex];
+          const targetX = target[0] * CELL_SIZE;
+          const targetY = target[1] * CELL_SIZE;
+
+          const dx = targetX - entity.x;
+          const dy = targetY - entity.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance <= entity.speed) {
+            entity.x = targetX;
+            entity.y = targetY;
+            entity.patrolIndex =
+              (entity.patrolIndex + 1) % entity.patrol.length;
+          } else {
+            entity.x += (dx / distance) * entity.speed;
+            entity.y += (dy / distance) * entity.speed;
+          }
+        });
+      }
+
+      function updateSnakes() {
+        const now = Date.now();
+
+        entities.forEach(function (entity) {
+          if (entity.type !== TYPES.SNAKE) {
+            return;
+          }
+
+          if (now - entity.lastShotAt < entity.shootEveryMs) {
+            return;
+          }
+
+          entity.lastShotAt = now;
+          createProjectile(
+            entity.x,
+            entity.y,
+            entity.directionX,
+            entity.directionY,
+          );
+        });
+      }
+
+      function updateProjectiles() {
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+          const bullet = projectiles[i];
+
+          bullet.x += bullet.dx * bullet.speed;
+          bullet.y += bullet.dy * bullet.speed;
+
+          if (isOutsideMap(bullet) || touchesAnyWall(bullet)) {
+            removeProjectileAt(i);
+            continue;
+          }
+
+          if (ovalCircleTouch(player, bullet)) {
+            hurtPlayer(1);
+            removeProjectileAt(i);
+          }
+        }
+      }
+
+      function checkDoorTouches() {
+        entities.slice().forEach(function (entity) {
+          if (entity.type !== TYPES.DOOR) {
+            return;
+          }
+
+          if (ovalBoxTouch(player, entity) && entity.onTouch) {
+            entity.onTouch(entity);
+          }
+        });
+      }
+
+      function checkEntityTouches() {
+        entities.slice().forEach(function (entity) {
+          if (entity.type === TYPES.DOOR) {
+            return;
+          }
+
+          let touched = false;
+
+          if (entity.boxSize) {
+            touched = ovalBoxTouch(player, entity);
+          } else if (entity.radius) {
+            touched = ovalCircleTouch(player, entity);
+          }
+
+          if (touched && entity.onTouch) {
+            entity.onTouch(entity);
+          }
+        });
+      }
+
+      function renderEverything() {
+        renderPlayer();
+
+        entities.forEach(function (entity) {
+          if (entity.el) {
+            setPosition(entity.el, entity.x, entity.y);
+          }
+        });
+
+        projectiles.forEach(function (projectile) {
+          if (projectile.el) {
+            setPosition(projectile.el, projectile.x, projectile.y);
+          }
+        });
+
+        renderHitboxes();
+      }
+
+      function increment_player_armor() {
+        player.armor_level += 1;
+        const r = player.armor_level % 3;
+        if (r === 1) {
+          player.el.textContent = "🧍‍♂️";
+        } else if (r === 2) {
+          player.el.textContent = "🧍‍♀️";
+        } else {
+          player.el.textContent = "🧍";
+        }
+      }
+
+      function renderPlayer() {
+        setPosition(player.el, player.x, player.y);
+      }
+
+      function getAxis(axis) {
+        let value = 0;
+
+        if (axis === "x") {
+          if (
+            pressedKeys["a"] ||
+            pressedKeys["A"] ||
+            pressedKeys["ArrowLeft"]
+          ) {
+            value -= 1;
+          }
+
+          if (
+            pressedKeys["d"] ||
+            pressedKeys["D"] ||
+            pressedKeys["ArrowRight"]
+          ) {
+            value += 1;
+          }
+        }
+
+        if (axis === "y") {
+          if (pressedKeys["w"] || pressedKeys["W"] || pressedKeys["ArrowUp"]) {
+            value -= 1;
+          }
+
+          if (
+            pressedKeys["s"] ||
+            pressedKeys["S"] ||
+            pressedKeys["ArrowDown"]
+          ) {
+            value += 1;
+          }
+        }
+
+        return value;
+      }
+
+      function resolveWallCollisions(mover) {
+        walls.forEach(function (wall) {
+          if (wall.boxSize) {
+            resolveOvalBox(mover, wall);
+          } else if (wall.radius) {
+            resolveOvalCircle(mover, wall);
+          }
+        });
+      }
+
+      function resolveCircleCircle(a, b) {
+        const ax = a.x + CELL_SIZE / 2;
+        const ay = a.y + CELL_SIZE / 2;
+        const bx = b.x + CELL_SIZE / 2;
+        const by = b.y + CELL_SIZE / 2;
+
+        const dx = ax - bx;
+        const dy = ay - by;
+        const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+        const overlap = a.radius + b.radius - distance;
+
+        if (overlap > 0) {
+          a.x += (dx / distance) * overlap;
+          a.y += (dy / distance) * overlap;
+        }
+      }
+
+      function resolveCircleBox(circle, box) {
+        const cx = circle.x + CELL_SIZE / 2;
+        const cy = circle.y + CELL_SIZE / 2;
+
+        const closestX = clamp(cx, box.x, box.x + box.boxSize);
+        const closestY = clamp(cy, box.y, box.y + box.boxSize);
+
+        const dx = cx - closestX;
+        const dy = cy - closestY;
+        const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+        const overlap = circle.radius - distance;
+
+        if (overlap > 0) {
+          circle.x += (dx / distance) * overlap;
+          circle.y += (dy / distance) * overlap;
+        }
+      }
+
+      function resolveOvalBox(oval, box) {
+        const centerX = getCenterX(oval);
+        const centerY = getCenterY(oval);
+
+        const closestX = clamp(centerX, box.x, box.x + box.boxSize);
+        const closestY = clamp(centerY, box.y, box.y + box.boxSize);
+
+        const dx = centerX - closestX;
+        const dy = centerY - closestY;
+
+        const radiusX = oval.radiusX;
+        const radiusY = oval.radiusY;
+
+        const normalizedX = dx / radiusX;
+        const normalizedY = dy / radiusY;
+
+        const distance = Math.sqrt(
+          normalizedX * normalizedX + normalizedY * normalizedY,
+        );
+
+        if (distance < 1) {
+          const safeDistance = distance || 0.0001;
+
+          const pushX = normalizedX / safeDistance;
+          const pushY = normalizedY / safeDistance;
+
+          const overlap = 1 - distance;
+
+          oval.x += pushX * overlap * radiusX;
+          oval.y += pushY * overlap * radiusY;
+        }
+      }
+
+      function resolveOvalCircle(oval, circle) {
+        const ovalCenterX = getCenterX(oval);
+        const ovalCenterY = getCenterY(oval);
+
+        const circleCenterX = getCenterX(circle);
+        const circleCenterY = getCenterY(circle);
+
+        const dx = ovalCenterX - circleCenterX;
+        const dy = ovalCenterY - circleCenterY;
+
+        const radiusX = oval.radiusX + circle.radius;
+        const radiusY = oval.radiusY + circle.radius;
+
+        const normalizedX = dx / radiusX;
+        const normalizedY = dy / radiusY;
+
+        const distance = Math.sqrt(
+          normalizedX * normalizedX + normalizedY * normalizedY,
+        );
+
+        if (distance < 1) {
+          const safeDistance = distance || 0.0001;
+
+          const pushX = normalizedX / safeDistance;
+          const pushY = normalizedY / safeDistance;
+
+          const overlap = 1 - distance;
+
+          oval.x += pushX * overlap * radiusX;
+          oval.y += pushY * overlap * radiusY;
+        }
+      }
+
+      function circleTouch(a, b) {
+        const ax = a.x + CELL_SIZE / 2;
+        const ay = a.y + CELL_SIZE / 2;
+        const bx = b.x + CELL_SIZE / 2;
+        const by = b.y + CELL_SIZE / 2;
+
+        const dx = ax - bx;
+        const dy = ay - by;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        return distance < a.radius + b.radius;
+      }
+
+      function circleBoxTouch(circle, box) {
+        const cx = circle.x + CELL_SIZE / 2;
+        const cy = circle.y + CELL_SIZE / 2;
+
+        const closestX = clamp(cx, box.x, box.x + box.boxSize);
+        const closestY = clamp(cy, box.y, box.y + box.boxSize);
+
+        const dx = cx - closestX;
+        const dy = cy - closestY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        return distance < circle.radius;
+      }
+
+      function ovalBoxTouch(oval, box) {
+        const centerX = getCenterX(oval);
+        const centerY = getCenterY(oval);
+
+        const closestX = clamp(centerX, box.x, box.x + box.boxSize);
+        const closestY = clamp(centerY, box.y, box.y + box.boxSize);
+
+        const dx = centerX - closestX;
+        const dy = centerY - closestY;
+
+        const normalizedX = dx / oval.radiusX;
+        const normalizedY = dy / oval.radiusY;
+
+        return normalizedX * normalizedX + normalizedY * normalizedY < 1;
+      }
+
+      function ovalCircleTouch(oval, circle) {
+        const ovalCenterX = getCenterX(oval);
+        const ovalCenterY = getCenterY(oval);
+
+        const circleCenterX = getCenterX(circle);
+        const circleCenterY = getCenterY(circle);
+
+        const dx = ovalCenterX - circleCenterX;
+        const dy = ovalCenterY - circleCenterY;
+
+        const radiusX = oval.radiusX + circle.radius;
+        const radiusY = oval.radiusY + circle.radius;
+
+        const normalizedX = dx / radiusX;
+        const normalizedY = dy / radiusY;
+
+        return normalizedX * normalizedX + normalizedY * normalizedY < 1;
+      }
+
+      function touchesAnyWall(circle) {
+        return walls.some(function (wall) {
+          if (wall.type === TYPES.NPC || wall.type === TYPES.DOOR) {
+            return false;
+          }
+
+          if (wall.boxSize) {
+            return circleBoxTouch(circle, wall);
+          }
+
+          return circleTouch(circle, wall);
+        });
+      }
+
+      function pushPlayerAwayFrom(entity) {
+        const px = player.x + CELL_SIZE / 2;
+        const py = player.y + CELL_SIZE / 2;
+        const ex = entity.x + CELL_SIZE / 2;
+        const ey = entity.y + CELL_SIZE / 2;
+
+        const dx = px - ex;
+        const dy = py - ey;
+        const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+
+        player.x += (dx / distance) * 14;
+        player.y += (dy / distance) * 14;
+
+        resolveWallCollisions(player);
+      }
+
+      function pushPlayerAwayFromWithForce(entity, force) {
+        const px = getCenterX(player);
+        const py = getCenterY(player);
+        const ex = getCenterX(entity);
+        const ey = getCenterY(entity);
+
+        const dx = px - ex;
+        const dy = py - ey;
+        const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+
+        player.x += (dx / distance) * force;
+        player.y += (dy / distance) * force;
+
+        resolveWallCollisions(player);
+      }
+
+      function enemyTouch(enemy) {
+        if (player.hasSword) {
+          hurtEnemy(enemy, 1);
+        } else {
+          hurtPlayer(enemy.attack || 1);
+        }
+
+        pushPlayerAwayFrom(enemy);
+      }
+
+      function hurtEnemy(enemy, amount) {
+        enemy.health -= amount;
+
+        enemy.el.classList.add("hurt");
+
+        setTimeout(function () {
+          enemy.el.classList.remove("hurt");
+        }, 300);
+
+        if (enemy.health <= 0) {
+          if (enemy.type === TYPES.BOSS) {
+            state.collected[enemy.collectionKey] = true;
+            state.game_state = GAME_STATES.WON;
+            showMessage(
+              "<strong>You win!</strong><br>You defeated the skeleton captain and completed the mini adventure.",
+            );
+          }
+
+          removeEntity(enemy);
+        }
+      }
+
+      function hurtPlayer(amount) {
+        const now = Date.now();
+
+        if (now < player.invulnerableUntil) {
+          return;
+        }
+
+        player.health -= amount;
+
+        if (player.health < 0) {
+          player.health = 0;
+        }
+
+        setHealth(player.health);
+
+        player.invulnerableUntil = now + 1000;
+        player.stunUntil = now + 200;
+
+        player.el.classList.add("hurt");
+
+        setTimeout(function () {
+          player.el.classList.remove("hurt");
+        }, 1000);
+
+        if (player.health <= 0) {
+          respawnPlayer();
+        }
+      }
+
+      function respawnPlayer() {
+        showMessage(
+          "<strong>Ouch!</strong><br>You were defeated. Respawning at the last checkpoint.",
+        );
+
+        // Prevent movement during the death delay.
+        player.stunUntil = Date.now() + 2000;
+
+        setTimeout(function () {
+          setHealth(player.maxHealth);
+
+          player.x = state.checkpointX * CELL_SIZE;
+          player.y = state.checkpointY * CELL_SIZE;
+
+          loadMap(state.checkpointMapId);
+        }, 2000);
+      }
+
+      function setHealth(value) {
+        player.health = value;
+
+        let html = "";
+
+        for (let i = 1; i <= player.maxHealth; i++) {
+          html += i <= value ? "♥" : "♡";
+        }
+
+        healthEl.innerHTML = html;
+      }
+
+      function updateInventory() {
+        keySlot.textContent = player.hasKey ? "🗝️" : "";
+        swordSlot.textContent = player.hasSword ? "⚔️" : "";
+      }
+
+      function showMessage(html) {
+        messageEl.innerHTML = html;
+        messageEl.style.display = "block";
+
+        clearTimeout(messageTimer);
+
+        messageTimer = setTimeout(function () {
+          messageEl.style.display = "none";
+        }, 2500);
+      }
+
+      function showInformation(html) {
+        infoEl.innerHTML = html;
+
+        clearTimeout(infoTimer);
+        infoTimer = setTimeout(function () {
+          infoEl.innerHTML =
+            "<p><strong>Controls:</strong> WASD or arrow keys.</p>";
+        }, 3500);
+      }
+
+      function handlePortals() {
+        if (player.x < MAP_LEFT) {
+          if (mapPortals.left) {
+            player.x = MAP_RIGHT - 5;
+            loadMap(mapPortals.left);
+          } else {
+            player.x = MAP_LEFT;
+          }
+        }
+
+        if (player.x > MAP_RIGHT) {
+          if (mapPortals.right) {
+            if (currentMapId === 3 && !state.openedDoors["3:9:3"]) {
+              player.x = MAP_RIGHT;
+              showMessage(
+                `<strong>Locked path</strong><br>The door blocks the treasure room.`,
+              );
+              showInformation(JSON.stringify(state.openedDoors));
+              return;
+            }
+
+            player.x = MAP_LEFT + 5;
+            loadMap(mapPortals.right);
+          } else {
+            player.x = MAP_RIGHT;
+          }
+        }
+
+        if (player.y < MAP_TOP) {
+          if (mapPortals.top) {
+            player.y = MAP_BOTTOM - 5;
+            loadMap(mapPortals.top);
+          } else {
+            player.y = MAP_TOP;
+          }
+        }
+
+        if (player.y > MAP_BOTTOM) {
+          if (mapPortals.bottom) {
+            player.y = MAP_TOP + 5;
+            loadMap(mapPortals.bottom);
+          } else {
+            player.y = MAP_BOTTOM;
+          }
+        }
+      }
+
+      function isOutsideMap(obj) {
+        return (
+          obj.x < MAP_LEFT ||
+          obj.x > MAP_RIGHT ||
+          obj.y < MAP_TOP ||
+          obj.y > MAP_BOTTOM
+        );
+      }
+
+      function removeEntity(entity) {
+        if (entity.el) {
+          entity.el.remove();
+        }
+
+        entities = entities.filter(function (e) {
+          return e !== entity;
+        });
+
+        walls = walls.filter(function (w) {
+          return w !== entity;
+        });
+      }
+
+      function removeProjectileAt(index) {
+        const projectile = projectiles[index];
+
+        if (projectile.el) {
+          projectile.el.remove();
+        }
+
+        projectiles.splice(index, 1);
+      }
+
+      function setGridPosition(el, col, row) {
+        setPosition(el, col * CELL_SIZE, row * CELL_SIZE);
+      }
+
+      function setPosition(el, x, y) {
+        el.style.left = x + "px";
+        el.style.top = y + "px";
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function roundDownToEven(value) {
+        if (value % 2 === 0) {
+          return value;
+        }
+        return value - 1;
+      }
+
+      startup();
+
+      //   ##     ## ###### ######## ########   #######  ##     ##    ##     ## ######### ##       ########  ######### ########   #######
+      //   ##     ##   ##      ##    ##     ## ##     ##  ##   ##     ##     ## ##        ##       ##     ## ##        ##     ## ##     ##
+      //   ##     ##   ##      ##    ##     ## ##     ##   ## ##      ##     ## ##        ##       ##     ## ##        ##     ## ##
+      //   #########   ##      ##    ########  ##     ##    ###       ######### ######    ##       ########  ######    ########   #######
+      //   ##     ##   ##      ##    ##     ## ##     ##   ## ##      ##     ## ##        ##       ##        ##        ##   ##          ##
+      //   ##     ##   ##      ##    ##     ## ##     ##  ##   ##     ##     ## ##        ##       ##        ##        ##    ##  ##     ##
+      //   ##     ## ######    ##    ########   #######  ##     ##    ##     ## ######### ######## ##        ######### ##     ##  #######
+      function clearHitboxes() {
+        hitboxElements.forEach(function (el) {
+          el.remove();
+        });
+
+        hitboxElements = [];
+      }
+
+      function renderHitboxes() {
+        clearHitboxes();
+
+        if (!show_hit_boxes) {
+          return;
+        }
+
+        const seen = new Set();
+        const objects = [player].concat(walls, entities, projectiles);
+
+        objects.forEach(function (obj) {
+          if (!obj || seen.has(obj)) {
+            return;
+          }
+
+          seen.add(obj);
+
+          if (obj.boxSize) {
+            createBoxHitbox(obj);
+          } else if (obj.radius || obj.radiusX || obj.radiusY) {
+            createCircleHitbox(obj);
+          }
+        });
+      }
+
+      function createBoxHitbox(obj) {
+        const hitbox = document.createElement("div");
+        hitbox.className = "hitbox-debug";
+
+        hitbox.style.left = obj.x + "px";
+        hitbox.style.top = obj.y + "px";
+        hitbox.style.width = obj.boxSize + "px";
+        hitbox.style.height = obj.boxSize + "px";
+
+        layer3.appendChild(hitbox);
+        hitboxElements.push(hitbox);
+      }
+
+      function createCircleHitbox(obj) {
+        const centerX = getCenterX(obj);
+        const centerY = getCenterY(obj);
+
+        const hitbox = document.createElement("div");
+        hitbox.className = "hitbox-debug circle";
+
+        const radiusX = obj.radiusX || obj.radius;
+        const radiusY = obj.radiusY || obj.radius;
+
+        hitbox.style.left = centerX - radiusX + "px";
+        hitbox.style.top = centerY - radiusY + "px";
+        hitbox.style.width = radiusX * 2 + "px";
+        hitbox.style.height = radiusY * 2 + "px";
+
+        layer3.appendChild(hitbox);
+        hitboxElements.push(hitbox);
+      }
+    </script>
+  </body>
+</html>
